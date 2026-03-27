@@ -1,0 +1,47 @@
+from rest_framework import serializers
+from .models import User, Exam, Question, ExamRegistration, ExamAttempt
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+
+class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        token['role'] = user.role
+        token['username'] = user.username
+        return token
+
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('id', 'username', 'email', 'role', 'password')
+        extra_kwargs = {'password': {'write_only': True}}
+        
+    def create(self, validated_data):
+        user = User.objects.create_user(**validated_data)
+        return user
+
+class QuestionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Question
+        fields = '__all__'
+
+class ExamSerializer(serializers.ModelSerializer):
+    questions = QuestionSerializer(many=True, read_only=True)
+    class Meta:
+        model = Exam
+        fields = '__all__'
+
+class ExamRegistrationSerializer(serializers.ModelSerializer):
+    exam_details = ExamSerializer(source='exam', read_only=True)
+    class Meta:
+        model = ExamRegistration
+        fields = '__all__'
+
+class ExamAttemptSerializer(serializers.ModelSerializer):
+    user_username = serializers.CharField(source='user.username', read_only=True)
+    exam_title = serializers.CharField(source='exam.title', read_only=True)
+
+    class Meta:
+        model = ExamAttempt
+        fields = '__all__'
